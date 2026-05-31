@@ -1155,15 +1155,17 @@ async function pushStageToSheet(script, stageIdx, stageVals) {
   }
 
   try {
+    // Send as form data — works with no-cors and Google Apps Script reads via e.parameter
+    const formData = new URLSearchParams();
+    formData.append('data', JSON.stringify(payload));
     await fetch(url, {
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload)
+      body: formData
     });
     showToast('Synced to Google Sheets ✓', 'success');
   } catch (e) {
-    showToast('Could not reach sheet — scores saved locally', 'error');
+    showToast('Sheet sync failed: ' + e.message, 'error');
     console.error('Sheet sync error:', e);
   }
 }
@@ -1352,7 +1354,10 @@ function renderAdminDashboard() {
   } catch(err) {
     console.error('renderAdminDashboard error:', err);
     const p = document.getElementById('stage-panels');
-    if(p) p.innerHTML = '<div style="color:red;padding:20px;font-family:monospace">' + err.toString() + '</div>';
+    const d = document.getElementById('dash-stats');
+    const msg = '<div style="background:#fdecea;border:2px solid #c0392b;border-radius:8px;padding:16px;color:#c0392b;font-family:monospace;font-size:13px;margin-bottom:12px"><strong>Dashboard Error:</strong> ' + err.toString() + '<br><br>' + (err.stack||'').split('\n').slice(0,3).join('<br>') + '</div>';
+    if(d) d.innerHTML = msg;
+    if(p) p.innerHTML = '';
   }
 }
 
