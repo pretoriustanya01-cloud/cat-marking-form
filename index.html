@@ -1193,6 +1193,7 @@ async function pushStageToSheet(script, stageIdx, stageVals) {
 let adminFilter = 'ALL';
 
 function renderAdminDashboard() {
+  try {
   const allPEDs = Object.keys(PED_ROSTER);
   const allScores = {};
   allPEDs.forEach(code => { allScores[code] = loadScores(code); });
@@ -1357,6 +1358,11 @@ function renderAdminDashboard() {
   });
 
   renderAdminMgmt();
+  } catch(err) {
+    console.error('renderAdminDashboard error:', err);
+    const p = document.getElementById('stage-panels');
+    if(p) p.innerHTML = '<div style="color:red;padding:20px;font-family:monospace">' + err.toString() + '</div>';
+  }
 }
 
 function getShortName(code) {
