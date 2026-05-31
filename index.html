@@ -795,10 +795,6 @@ function showScreen(name) {
     badge.style.display = '';
     renderAdminDashboard();
     startAdminAutoRefresh();
-    // Pre-fill CSV URL input if saved
-    setTimeout(() => {
-      const inp = document.getElementById('csv-url-input');
-          }, 100);
   }
 }
 
@@ -1287,6 +1283,9 @@ function renderAdminDashboard() {
   // Fetch online statuses via JSONP (works from file://)
   fetchOnlineStatuses();
 
+  // Refresh online statuses from localStorage
+  fetchOnlineStatuses();
+
   // Build one panel per stage: timer + stage stats + PED chips
   const filtered = allPEDs.filter(c => adminFilter === 'ALL' || c.startsWith(adminFilter));
   const panelsEl = document.getElementById('stage-panels');
@@ -1476,7 +1475,10 @@ let adminAutoRefresh = null;
 function startAdminAutoRefresh() {
   stopAdminAutoRefresh();
   adminAutoRefresh = setInterval(() => {
-    if (currentRole === 'admin') renderAdminDashboard();
+    if (currentRole === 'admin') {
+      fetchOnlineStatuses();
+      renderAdminDashboard();
+    }
   }, 15000);
 }
 function stopAdminAutoRefresh() {
