@@ -1243,9 +1243,6 @@ function renderAdminDashboard() {
     <div class="stat-pill"><div class="sp-label">Overall completion</div><div class="sp-val ${subPct===100?'green':subPct>50?'orange':'blue'}">${subPct}%</div></div>
   `;
 
-  // Fetch online statuses via JSONP (works from file://)
-  fetchOnlineStatuses();
-
   // Build one panel per stage: timer + stage stats + PED chips
   const filtered = allPEDs.filter(c => adminFilter === 'ALL' || c.startsWith(adminFilter));
   const panelsEl = document.getElementById('stage-panels');
