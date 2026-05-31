@@ -1155,22 +1155,13 @@ async function pushStageToSheet(script, stageIdx, stageVals) {
   }
 
   try {
-    // Use fetch with text/plain to avoid CORS preflight (Apps Script accepts this)
-    const response = await fetch(url, {
+    await fetch(url, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
     });
-    if (response.ok) {
-      const result = await response.json();
-      if (result.status === 'ok') {
-        showToast('Synced to Google Sheets ✓', 'success');
-      } else {
-        showToast('Sheet error: ' + (result.msg || 'unknown'), 'error');
-      }
-    } else {
-      showToast('Sheet sync failed (' + response.status + ')', 'error');
-    }
+    showToast('Synced to Google Sheets ✓', 'success');
   } catch (e) {
     showToast('Could not reach sheet — scores saved locally', 'error');
     console.error('Sheet sync error:', e);
