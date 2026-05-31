@@ -795,6 +795,10 @@ function showScreen(name) {
     badge.style.display = '';
     renderAdminDashboard();
     startAdminAutoRefresh();
+    // Pre-fill CSV URL input if saved
+    setTimeout(() => {
+      const inp = document.getElementById('csv-url-input');
+          }, 100);
   }
 }
 
@@ -1189,39 +1193,39 @@ async function pushStageToSheet(script, stageIdx, stageVals) {
 
 // onlineStatuses declared below
 
-async function pingOnlineStatus(code, status) {
-  const url = webhookUrl;
-  if (!url) return;
+function pingOnlineStatus(code, status) {
+  // Write to localStorage — shared across all tabs on same hosted URL
+  const key = 'cat_online_' + code.replace(' ', '_');
+  if (status === 'online') {
+    localStorage.setItem(key, 'online');
+  } else {
+    localStorage.removeItem(key);
+  }
+  // Also try to ping the sheet (best effort, no-cors)
   try {
-    await fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
+    const url = webhookUrl;
+    if (url) fetch(url, {
+      method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ type: 'status', pedCode: code, status: status })
     });
-  } catch(e) { /* silent — non-critical */ }
+  } catch(e) {}
 }
 
-// Online statuses — fetched via script tag injection (JSONP) to bypass CORS
+// Online statuses — stored in localStorage (shared when hosted on same URL)
 let onlineStatuses = {};
-let statusScriptTag = null;
-
-window.handleStatusResponse = function(data) {
-  if (data && data.statuses) onlineStatuses = data.statuses;
-};
 
 function fetchOnlineStatuses() {
-  const url = webhookUrl;
-  if (!url) return;
-  // Remove old script tag
-  if (statusScriptTag && statusScriptTag.parentNode) {
-    statusScriptTag.parentNode.removeChild(statusScriptTag);
-  }
-  // Inject new script tag with callback — works from file:// without CORS
-  statusScriptTag = document.createElement('script');
-  statusScriptTag.src = url + '?action=status&callback=handleStatusResponse&t=' + Date.now();
-  document.head.appendChild(statusScriptTag);
+  // Read all cat_online_ keys from localStorage
+  const statuses = {};
+  Object.keys(PED_ROSTER).forEach(code => {
+    const key = 'cat_online_' + code.replace(' ', '_');
+    const val = localStorage.getItem(key);
+    if (val) statuses[code] = val;
+  });
+  onlineStatuses = statuses;
 }
+
 
 // ═══════════════════════════════════════════════════════
 // ADMIN DASHBOARD
