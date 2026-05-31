@@ -351,24 +351,23 @@
   }
   .sp-ped-chip.done    { background: var(--accent-lt); border-color: rgba(13,122,78,0.35); }
   .sp-ped-chip.active  { background: var(--accent2-lt); border-color: rgba(26,111,168,0.35); }
-  .sp-ped-chip.online  { background: #fff8e6; border-color: rgba(194,94,0,0.4); }
+
   .sp-ped-chip.pending { border-color: var(--border2); }
   .sp-ped-dot {
     width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--text3); transition: background 0.3s;
   }
   .sp-ped-chip.done   .sp-ped-dot { background: var(--accent); }
   .sp-ped-chip.active .sp-ped-dot { background: var(--accent2); }
-  .sp-ped-chip.online .sp-ped-dot { background: var(--accent3); animation: pulse-dot 1.5s infinite; }
-  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
   .sp-ped-code   { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text2); }
   .sp-ped-chip.done   .sp-ped-code { color: var(--accent); }
   .sp-ped-chip.active .sp-ped-code { color: var(--accent2); }
-  .sp-ped-chip.online .sp-ped-code { color: var(--accent3); }
+
   .sp-ped-name   { font-size: 12px; color: var(--text); font-weight: 500; }
   .sp-ped-status { font-size: 10px; color: var(--text3); margin-top: 1px; font-family: 'DM Mono', monospace; }
   .sp-ped-chip.done   .sp-ped-status { color: var(--accent); }
   .sp-ped-chip.active .sp-ped-status { color: var(--accent2); }
-  .sp-ped-chip.online .sp-ped-status { color: var(--accent3); }
+
   .sp-ped-chip.inactive {
     opacity: 0.4; border-style: dashed; border-color: var(--border2); background: transparent;
   }
@@ -741,8 +740,6 @@ function loginPED() {
   currentUser = { code, province, role, name: document.getElementById('ped-name').value.trim() };
   currentRole = 'ped';
   scores = loadScores(code);
-  // Ping the Google Sheet to signal this PED is now online
-  pingOnlineStatus(code, 'online');
   showScreen('ped');
 }
 
@@ -762,9 +759,7 @@ function loginAdmin() {
 }
 
 function logout() {
-  if (currentUser && currentRole === 'ped') {
-    pingOnlineStatus(currentUser.code, 'offline');
-  }
+
   stopAdminAutoRefresh();
   currentUser = null; currentRole = null;
   showScreen('login');
@@ -1187,40 +1182,8 @@ async function pushStageToSheet(script, stageIdx, stageVals) {
 // ONLINE STATUS
 // ═══════════════════════════════════════════════════════
 
-// onlineStatuses declared below
 
-function pingOnlineStatus(code, status) {
-  // Write to localStorage — shared across all tabs on same hosted URL
-  const key = 'cat_online_' + code.replace(' ', '_');
-  if (status === 'online') {
-    localStorage.setItem(key, 'online');
-  } else {
-    localStorage.removeItem(key);
-  }
-  // Also try to ping the sheet (best effort, no-cors)
-  try {
-    const url = webhookUrl;
-    if (url) fetch(url, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ type: 'status', pedCode: code, status: status })
-    });
-  } catch(e) {}
-}
 
-// Online statuses — stored in localStorage (shared when hosted on same URL)
-let onlineStatuses = {};
-
-function fetchOnlineStatuses() {
-  // Read all cat_online_ keys from localStorage
-  const statuses = {};
-  Object.keys(PED_ROSTER).forEach(code => {
-    const key = 'cat_online_' + code.replace(' ', '_');
-    const val = localStorage.getItem(key);
-    if (val) statuses[code] = val;
-  });
-  onlineStatuses = statuses;
-}
 
 
 // ═══════════════════════════════════════════════════════
@@ -1283,9 +1246,6 @@ function renderAdminDashboard() {
   // Fetch online statuses via JSONP (works from file://)
   fetchOnlineStatuses();
 
-  // Refresh online statuses from localStorage
-  fetchOnlineStatuses();
-
   // Build one panel per stage: timer + stage stats + PED chips
   const filtered = allPEDs.filter(c => adminFilter === 'ALL' || c.startsWith(adminFilter));
   const panelsEl = document.getElementById('stage-panels');
@@ -1318,12 +1278,10 @@ function renderAdminDashboard() {
       const done      = !inactive && stageSubmitted(code, si);
       const count     = inactive ? 0 : stageScriptsCount(code, si);
       const isActive  = !inactive && !done && count > 0;
-      const isOnline  = !inactive && !done && !isActive && onlineStatuses[code] === 'online';
-      const chipCls   = inactive ? 'inactive' : done ? 'done' : isActive ? 'active' : isOnline ? 'online' : 'pending';
+      const chipCls   = inactive ? 'inactive' : done ? 'done' : isActive ? 'active' : 'pending';
       const statusLabel = inactive ? 'Inactive this session'
-        : done    ? 'All 6 submitted ✓'
+        : done     ? 'All 6 submitted ✓'
         : isActive ? count + '/6 scripts'
-        : isOnline ? 'Logged in — marking'
         : 'Not started';
       return `<div class="sp-ped-chip ${chipCls}">
         <div class="sp-ped-dot"></div>
@@ -1369,9 +1327,6 @@ function renderAdminDashboard() {
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
           <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--accent)"></div> All submitted
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--accent3)"></div> Logged in
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--accent2)"></div> In progress
@@ -1475,10 +1430,7 @@ let adminAutoRefresh = null;
 function startAdminAutoRefresh() {
   stopAdminAutoRefresh();
   adminAutoRefresh = setInterval(() => {
-    if (currentRole === 'admin') {
-      fetchOnlineStatuses();
-      renderAdminDashboard();
-    }
+    if (currentRole === 'admin') renderAdminDashboard();
   }, 15000);
 }
 function stopAdminAutoRefresh() {
